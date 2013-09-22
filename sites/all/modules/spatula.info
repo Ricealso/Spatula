@@ -1,4 +1,6 @@
 name = Spatula
 description = A fitness application with pets that respond to an active lifestyle.
 package = Development
+core = 7.x
 
+configure = admin/config/content/spatula

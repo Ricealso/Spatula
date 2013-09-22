@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 /**
  * @file
@@ -19,22 +19,35 @@ define('DRUPAL_ROOT', getcwd());
 require_once DRUPAL_ROOT . '/includes/bootstrap.inc';
 drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 extract($_POST);
-$uid = user_authenticate($username, $password);
-if ($uid)
+if ($type == "login")
 {
-$results = db_query('SELECT n.id, n.uid, n.name, n.exp, n.happiness
-FROM {pet} n WHERE n.uid = :uid AND n.primary = 1', array(':uid' => $uid));
-$i = 0;
-
-foreach($results as $result)
-{
-$arr0 = array('petid' => $result->id,
-'uid' => $result->uid,
-'petname' => $result->name,
-'experience' => $result->exp,
-'happiness' => $result->happiness);
-}
-	echo json_encode($arr0);
+	$uid = user_authenticate($username, $password);
+	if ($uid)
+	{
+		$arr0 = array('uid' => $uid,
+		'type' => $type,
+		'success' => 1);
 	}
 	else
-	echo "0";
+	{
+		$arr0 = array('uid' => $uid,
+		'type' => $type,
+		'success' => 0);
+	}	
+	echo json_encode($arr0);
+}
+else if ($type == "signup")
+{
+	$from = variable_get('site_mail',ini_get('sendmail_from'));
+	$curUser = user_save('', array( 'name' => $user, 'pass' => $pass, 'mail' => $mail, 'roles' => array()));
+	if ($curUser->uid > 0){
+	$arr0 = array('uid' => $curUser->uid, 'type' => $type, 'success' => 1);}
+	else
+	$arr0 = array('uid' => 0, 'type' => $type, 'success' => 0);
+	echo json_encode($arr0);
+}
+else
+{
+$arr0 = array('uid' => 0, 'type' => "Unknown", 'success' => 0);
+echo json_encode($arr0);
+}

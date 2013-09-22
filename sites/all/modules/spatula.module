@@ -1,0 +1,179 @@
+<?php
+
+function spatula_help($path, $args)
+{
+ switch ($path) {
+    case "admin/help#spatula":
+      return '<p>' . t("Adds fitness pets to the system") . '</p>';
+      break;
+  }
+}
+function spatula_menu_theme($data) {
+
+} 
+function spatula_theme() {
+	return array(
+		'sidebar' => array(
+			'arguments' => array(
+				'data' => array())
+				)
+			);
+			
+}
+function theme_sidebar($data) {
+/*$data should always contain:
+$username
+$imgurl
+$petname
+$exp
+$happiness
+*/
+extract($data);
+$output = "<div id = 'sidebar' class = 'sidebar'><div id = 'sidebar_username' class = 'text'>".$username."</div>";
+$output .= "<div id = 'sidebar_image' class = 'image'><img src = '".DRUPAL_ROOT."\\".$imgurl."' alt='main pet image' /></div>";
+$output .= "<div id = 'sidebar_name' class = 'text'>".$petname." - Level ".exp_to_level($exp)."</div>";
+$output .= "<div id = 'sidebar_stats' class = 'smalltext'><div id = 'experience'>".$exp."</div><div id = 'happiness'>".$happiness."</div></div></div>";
+return $output;
+
+}
+function exp_to_level($experience)
+{
+$level_list = array( 
+				'1' => 0,
+				'2' => 10,
+				'3' => 20,
+				'4' => 40,
+				'5' => 100,
+				'6' => 220,
+				'7' => 450,
+				'8' => 900,
+				'9' => 2100,
+				'10' => 5000);
+foreach($level_list as $level => $levelexp)
+	if ($levelexp < $experience)
+		$curlev =$level;
+	else return $curlev;
+	
+}
+function spatula_menu() {
+	$items[] = array();
+	
+	  $items['admin/config/content/spatula'] = array(
+    'title' => 'Fitness Pets',
+    'description' => 'Configuration for Fitness Pets module',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('spatula_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+function spatula_form($form, &$form_state) {
+  $form['spatula_show'] = array(
+    '#type' => 'radio',
+    '#title' => t('Show fitness pets'),
+    '#default_value' => variable_get('spatula_show', 1),
+    '#size' => 1,
+    '#maxlength' => 1,
+    '#description' => t('Whether to show the fitness pets module or not'),
+    '#required' => TRUE,
+  );
+
+  return system_settings_form($form);
+}
+function spatula_block_info() {
+  $blocks['spatula'] = array(
+    // The name that will appear in the block list.
+    'info' => t('Active Pet'),
+    // Default setting.
+    'cache' => DRUPAL_CACHE_PER_ROLE);
+  $blocks['spatulamain'] = array(
+  'info' => t('Pet Information'),
+  'cache' => DRUPAL_CACHE_PER_ROLE);
+  return $blocks;
+  }
+ function spatula_pet($arg = "primary"){
+global $user;
+if ($arg == "primary")
+$pets = db_query("SELECT p.id, p.uid, p.name, p.exp, p.happiness, p.type FROM {pet} p WHERE uid = :uid AND `primary` = :primary", array(':uid' => $user->uid, ':primary' => 1));	
+else if ($arg == "all")
+$pets = db_query("SELECT p.id, p.uid, p.name, p.exp, p.happiness, p.type FROM {pet} p WHERE uid = :uid", array(':uid' => $user->uid));	
+else
+$pets = db_query("SELECT p.id, p.uid, p.name, p.exp, p.happiness, p.type FROM {pet} p WHERE id = :id", array(':id' => $arg));
+return $pets;
+			}
+function spatula_image($id = NULL){
+$pets = spatula_pet($id)->fetchAssoc();
+
+$types = db_select('pet_types','pt')
+		-> fields('pt', array('type','imgurl'))
+		-> condition('type', $pets['type'])
+		-> execute();
+		return $types->fetchAssoc();
+		}
+function spatula_block_view($type = '') 
+{
+	global $user;
+	
+	$show = variable_get('spatula_show', 1);
+	switch ($type) 
+	{
+	
+		case 'spatula':
+		if ($show){
+			$block['subject'] = t('Pet Information');
+			if (user_access('access content')) {
+				$query = spatula_pet();
+				$pet = $query -> fetchAssoc();
+				$petimage = spatula_image($pet['id']);
+				$data = array('username' => $user->name, 
+						'imgurl' => $petimage['imgurl'], 
+						'petname' => $pet['name'], 
+						'exp' => $pet['exp'], 
+						'happiness' => $pet['happiness']
+						);
+				if (empty($data)) 
+				{
+					$block['content'] = t('No primary pet set');
+				}
+				else 
+				{
+					$block['content'] = theme('sidebar', $data);
+				}
+			}
+			
+			return $block;
+		}
+		else break;
+		case 'spatulamain':
+		if ($show){
+			$block['subject'] = t('All Pet Information');
+			if (user_access('access content')) 
+			{
+				$primpet = spatula_pet()->fetchAssoc();
+				$pets = spatula_pet("all");
+				$petimage = spatula_image($primpet['id']);
+				$petlist = array();
+				$petlist[] = array('username' => $user->name, 'imgurl' => $petimage['imgurl'], 'petname' => $primpet['name'], 'exp' => $primpet['exp'], 'happiness' =>$primpet['happiness']);
+				
+				foreach($pets as $pet)
+				{
+				
+				$petimage = spatula_image($pet->id);
+					if ($primpet['id'] != $pet->id)
+					$petlist[] = array('username' => $user->name, 'imgurl' => $petimage['imgurl'], 'petname' => $pet->name, 'exp' => $pet->exp, 'happiness' =>$pet->happiness);
+				}
+				if (empty($petlist))
+					$block['content'] = t('No pets exist');
+				else
+				{
+					$block['content'] = theme('spatule_sidebar', array('data' => $petlist));
+				}
+				
+				return $block;
+			}
+			}
+			else break;
+	}
+}
