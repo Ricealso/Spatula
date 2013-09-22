@@ -1,5 +1,7 @@
 <?php
-
+error_reporting(E_ALL);
+ini_set('display_errors',TRUE);
+ini_set('display_startup_errors',TRUE);
 function spatula_help($path, $args)
 {
  switch ($path) {
@@ -8,19 +10,34 @@ function spatula_help($path, $args)
       break;
   }
 }
-function spatula_menu_theme($data) {
-
-} 
 function spatula_theme() {
 	return array(
-		'sidebar' => array(
-			'arguments' => array(
-				'data' => array())
+		'spatula_sidebar' => array(
+			'variables' => array(
+					'username' => NULL,
+					'imgurl' => NULL,
+					'typename' => NULL,
+					'petname' => NULL,
+					'exp' => NULL,
+					'happiness' => NULL
 				)
+				),
+		'spatula_main' => array(
+			'variables' => array(
+				'data' => array(
+					'username' => NULL,
+					'imgurl' => NULL,
+					'typename' => NULL,
+					'petname' => NULL,
+					'exp' => NULL,
+					'happiness' => NULL
+					)
+				)
+			)
 			);
 			
 }
-function theme_sidebar($data) {
+function theme_spatula_sidebar($data) {
 /*$data should always contain:
 $username
 $imgurl
@@ -28,13 +45,47 @@ $petname
 $exp
 $happiness
 */
-extract($data);
-$output = "<div id = 'sidebar' class = 'sidebar'><div id = 'sidebar_username' class = 'text'>".$username."</div>";
-$output .= "<div id = 'sidebar_image' class = 'image'><img src = '".DRUPAL_ROOT."\\".$imgurl."' alt='main pet image' /></div>";
-$output .= "<div id = 'sidebar_name' class = 'text'>".$petname." - Level ".exp_to_level($exp)."</div>";
-$output .= "<div id = 'sidebar_stats' class = 'smalltext'><div id = 'experience'>".$exp."</div><div id = 'happiness'>".$happiness."</div></div></div>";
+$path = "http://bmyf.clanslots.com/drupal/includes/images/bigthumb/";
+$output = "<center><div id = 'sidebar' class = 'sidebar'><div id = 'sidebar_username' class = 'text'>".$data['username']."</div>";
+$output .= "<div id = 'sidebar_image' class = 'image'><img src = '".$path.$data['imgurl']."' alt='Pet Image' /></div>";
+$output .= "<div id = 'sidebar_name' class = 'text'>".$data['petname']." - Level ".exp_to_level($data['exp'])."</div>";
+$output .= "<div id = 'sidebar_stats' class = 'smalltext'><div id = 'species'>".$data['typename']."</div><div id = 'experience'>Experience: ";
+$output .= $data['exp']."</div><div id = 'happiness'>Happiness: ".$data['happiness']."</div></div></div></center>";
 return $output;
 
+}
+function spatula_menu() {
+  $items['spatula'] = array(
+    'title' => 'My Pet Page',
+    'page callback' => 'spatula_block_view',
+	'page arguments' => 'spatulamain',
+	'access callback' => TRUE,
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+function theme_spatula_main($data) {
+$row = $data->fetchAssoc();
+
+$path = "http://bmyf.clanslots.com/drupal/includes/images/bigthumb/";
+$output = "<center><div id = 'sidebar' class = 'sidebar'><div id = 'main_username' class = 'text'>".$row['username']."</div>";
+$output .= "<div id = 'sidebar_image' class = 'image'><img src = '".$path.$row['imgurl']."' alt='Pet Image' /></div>";
+$output .= "<div id = 'sidebar_name' class = 'text'>".$row['petname']." - Level ".exp_to_level($row['exp'])."</div>";
+$output .= "<div id = 'sidebar_stats' class = 'smalltext'><div id = 'species'>".$row['typename']."</div><div id = 'experience'>Experience: ";
+$output .= $row['exp']."</div><div id = 'happiness'>Happiness: ".$row['happiness']."</div></div></div></center>";
+
+$path = "http://bmyf.clanslots.com/drupal/includes/images/smallthumb/";
+$output .= "<table id= 'otherpets' class = 'main'><tr>";
+foreach($data as $row)
+{
+$output .= "<td><div id = 'main_username' class = 'text'>".$row['username']."</div>";
+$output .= "<div id = 'main_image' class = 'image'><img src = '".$path.$row['imgurl']."' alt='Pet Image' /></div>";
+$output .= "<div id = 'main_name' class = 'text'>".$row['petname']." - Level ".exp_to_level($row['exp'])."</div>";
+$output .= "<div id = 'main_stats' class = 'smalltext'><div id = 'species'>".$row['typename']."</div><div id = 'experience'>Experience: ";
+$output .= $row['exp']."</div><div id = 'happiness'>Happiness: ".$row['happiness']."</div></div></td>";
+}
+$output .= "</tr></table>";
+return $output;
 }
 function exp_to_level($experience)
 {
@@ -50,38 +101,12 @@ $level_list = array(
 				'9' => 2100,
 				'10' => 5000);
 foreach($level_list as $level => $levelexp)
-	if ($levelexp < $experience)
+	if ($levelexp <= $experience)
 		$curlev =$level;
 	else return $curlev;
 	
 }
-function spatula_menu() {
-	$items[] = array();
-	
-	  $items['admin/config/content/spatula'] = array(
-    'title' => 'Fitness Pets',
-    'description' => 'Configuration for Fitness Pets module',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('spatula_form'),
-    'access arguments' => array('access administration pages'),
-    'type' => MENU_NORMAL_ITEM,
-  );
 
-  return $items;
-}
-function spatula_form($form, &$form_state) {
-  $form['spatula_show'] = array(
-    '#type' => 'radio',
-    '#title' => t('Show fitness pets'),
-    '#default_value' => variable_get('spatula_show', 1),
-    '#size' => 1,
-    '#maxlength' => 1,
-    '#description' => t('Whether to show the fitness pets module or not'),
-    '#required' => TRUE,
-  );
-
-  return system_settings_form($form);
-}
 function spatula_block_info() {
   $blocks['spatula'] = array(
     // The name that will appear in the block list.
@@ -107,7 +132,7 @@ function spatula_image($id = NULL){
 $pets = spatula_pet($id)->fetchAssoc();
 
 $types = db_select('pet_types','pt')
-		-> fields('pt', array('type','imgurl'))
+		-> fields('pt', array('type','typename','imgurl'))
 		-> condition('type', $pets['type'])
 		-> execute();
 		return $types->fetchAssoc();
@@ -121,7 +146,7 @@ function spatula_block_view($type = '')
 	{
 	
 		case 'spatula':
-		if ($show){
+		
 			$block['subject'] = t('Pet Information');
 			if (user_access('access content')) {
 				$query = spatula_pet();
@@ -129,28 +154,28 @@ function spatula_block_view($type = '')
 				$petimage = spatula_image($pet['id']);
 				$data = array('username' => $user->name, 
 						'imgurl' => $petimage['imgurl'], 
+						'typename' => $petimage['typename'],
 						'petname' => $pet['name'], 
 						'exp' => $pet['exp'], 
 						'happiness' => $pet['happiness']
 						);
+						
 				if (empty($data)) 
 				{
 					$block['content'] = t('No primary pet set');
 				}
 				else 
 				{
-					$block['content'] = theme('sidebar', $data);
+					$block['content'] =  theme('spatula_sidebar', $data);
+					return $block;
 				}
 			}
 			
-			return $block;
-		}
-		else break;
 		case 'spatulamain':
-		if ($show){
 			$block['subject'] = t('All Pet Information');
 			if (user_access('access content')) 
 			{
+			
 				$primpet = spatula_pet()->fetchAssoc();
 				$pets = spatula_pet("all");
 				$petimage = spatula_image($primpet['id']);
@@ -168,12 +193,10 @@ function spatula_block_view($type = '')
 					$block['content'] = t('No pets exist');
 				else
 				{
-					$block['content'] = theme('spatule_sidebar', array('data' => $petlist));
+					$block['content'] = theme('spatula_main', array('data' => $petlist));
 				}
-				
 				return $block;
 			}
-			}
-			else break;
+			
 	}
 }
